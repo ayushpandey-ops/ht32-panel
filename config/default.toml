@@ -1,0 +1,36 @@
+# HT32 Panel Daemon Configuration
+
+# NOTE: TOML is section-scoped. Every bare key below belongs to the most recent
+# [section] header, so top-level settings must stay ABOVE the first one.
+
+# Display refresh interval (milliseconds, 500-10000)
+refresh_interval = 2500
+
+# Heartbeat interval (milliseconds)
+heartbeat = 1000
+
+# Web Server Configuration
+[web]
+# Enable the web server (disabled by default)
+enable = true
+# Server listen address
+listen = "[::1]:8686"
+
+# Device Configuration
+[devices]
+# LCD device path or "auto" for auto-detection by VID:PID
+lcd = "auto"
+# Serial port path for LED controller (CH340)
+led = "/dev/ttyUSB0"
+# Note: LED theme, intensity, and speed are stored in the state directory.
+# Use `ht32panelctl led set <theme>` to change them.
+
+# Canvas Configuration
+[canvas]
+width = 320
+height = 170
+
+# Git status face: path to the repository to show. Relative paths are resolved
+# from the daemon's working directory. Use an absolute path for system services.
+[git]
+repository = "."

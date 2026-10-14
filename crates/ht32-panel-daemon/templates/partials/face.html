@@ -1,0 +1,10 @@
+<form hx-post="/face" hx-target="#face-controls" hx-swap="innerHTML" hx-disabled-elt="find button">
+    <div class="controls">
+        {% for face in faces %}
+        <button type="submit" name="face" value="{{ face.id }}" class="btn{% if face.id == current %} active{% endif %}">
+            {{ face.display_name }}
+        </button>
+        {% endfor %}
+        <span class="htmx-indicator spinner"></span>
+    </div>
+</form>

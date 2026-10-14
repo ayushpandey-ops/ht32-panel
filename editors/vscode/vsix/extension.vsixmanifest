@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="ht32-panel-git-workspace" Version="0.1.8" Publisher="ht32-panel" />
+    <DisplayName>HT32 Panel Git Workspace</DisplayName>
+    <Description xml:space="preserve">Show the active VS Code workspace branch and recent commits on an HT32 Panel.</Description>
+    <Tags>git;panel;ht32</Tags>
+    <Categories>Other</Categories>
+    <GalleryFlags>Public</GalleryFlags>
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.93.0" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="ui" />
+    </Properties>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Code" Version="^1.80.0" />
+  </Installation>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true" />
+  </Assets>
+</PackageManifest>

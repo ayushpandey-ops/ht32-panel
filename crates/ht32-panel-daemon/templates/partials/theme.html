@@ -1,0 +1,10 @@
+<form hx-post="/theme" hx-target="#theme-controls" hx-swap="innerHTML" hx-disabled-elt="find button">
+    <div class="button-group controls">
+        {% for theme in themes %}
+        <button type="submit" name="theme" value="{{ theme.id }}" class="btn{% if theme.id == current %} active{% endif %}">
+            {{ theme.display_name }}
+        </button>
+        {% endfor %}
+        <span class="htmx-indicator spinner"></span>
+    </div>
+</form>

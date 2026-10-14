@@ -1,0 +1,31 @@
+{
+  "name": "ht32-panel-git-workspace",
+  "displayName": "HT32 Panel Git Workspace",
+  "description": "Show the active VS Code workspace branch and recent commits on an HT32 Panel.",
+  "version": "0.1.8",
+  "publisher": "ht32-panel",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ht32Panel.refreshGitRepository",
+        "title": "HT32 Panel: Refresh Git Repository"
+      }
+    ],
+    "configuration": {
+      "title": "HT32 Panel Git Workspace",
+      "properties": {
+        "ht32Panel.cliPath": {
+          "type": "string",
+          "default": "ht32panelctl",
+          "description": "Path to the ht32panelctl executable."
+        }
+      }
+    }
+  }
+}

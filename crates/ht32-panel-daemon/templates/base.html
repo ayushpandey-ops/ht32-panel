@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HT32 Panel</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        h1 { margin-bottom: 1rem; color: #00d4ff; }
+        h2 { margin: 1rem 0 0.5rem; color: #aaa; font-size: 0.9rem; text-transform: uppercase; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .preview {
+            text-align: center;
+            background: #0f0f23;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .preview img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #333;
+            border-radius: 4px;
+        }
+        .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn:hover { background: #1a508b; }
+        .btn.active { background: #00d4ff; color: #000; }
+        .slider-group { margin: 0.5rem 0; }
+        .slider-group label { display: block; margin-bottom: 0.25rem; font-size: 0.85rem; }
+        .slider-group input[type="range"] { width: 100%; }
+        .slider-value { text-align: right; font-size: 0.8rem; color: #888; }
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .status.connected { background: #0a3d0a; color: #4caf50; }
+        .status.disconnected { background: #3d0a0a; color: #f44336; }
+        select {
+            background: #0f3460;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        input[type="text"] {
+            background: #0f3460;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+        input[type="color"] {
+            width: 3rem;
+            height: 2rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .color-group, .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .color-group label, .input-group label {
+            min-width: 6rem;
+            font-size: 0.85rem;
+        }
+        .color-value { font-size: 0.8rem; color: #888; font-family: monospace; }
+        /* HTMX loading states */
+        .htmx-request { opacity: 0.5; pointer-events: none; }
+        .htmx-request .btn { cursor: wait; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-request.htmx-indicator { display: inline-block; }
+        .spinner {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid #333;
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        .card { position: relative; }
+        .refresh-controls {
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .refresh-controls input[type="range"] { flex: 1; max-width: 200px; }
+        .flash { animation: flash 0.3s; }
+        @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        /* Section styling */
+        .section {
+            margin-bottom: 1.5rem;
+        }
+        .section-header {
+            font-size: 1.1rem;
+            color: #00d4ff;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #333;
+        }
+        /* Side-by-side cards on wider screens */
+        .card-row {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 600px) {
+            .card-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .card-row .card {
+            margin-bottom: 0;
+        }
+        .hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HT32 Panel</h1>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

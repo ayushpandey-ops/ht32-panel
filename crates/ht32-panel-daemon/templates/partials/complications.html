@@ -1,0 +1,150 @@
+<p class="hint">Customize which elements appear on the <strong>{{ face_name }}</strong> face.</p>
+<div class="complications-list">
+    {% for comp in complications %}
+    <div class="complication-entry">
+        <form hx-post="/complications" hx-target="#complications-controls" hx-swap="innerHTML" hx-trigger="change">
+            <input type="hidden" name="complication" value="{{ comp.id }}">
+            <label class="complication-item">
+                <input type="checkbox" name="enabled" {% if comp.enabled %}checked{% endif %}>
+                <span class="complication-info">
+                    <span class="complication-name">{{ comp.name }}</span>
+                    <span class="complication-desc">{{ comp.description }}</span>
+                </span>
+            </label>
+        </form>
+        {% if comp.enabled && !comp.options.is_empty() %}
+        <div class="complication-options">
+            {% for opt in comp.options %}
+            <form hx-post="/complication-option" hx-target="#complications-controls" hx-swap="innerHTML" hx-trigger="change">
+                <input type="hidden" name="complication" value="{{ comp.id }}">
+                <input type="hidden" name="option" value="{{ opt.id }}">
+                <label class="option-label">
+                    <span class="option-name">{{ opt.name }}:</span>
+                    {% if opt.is_range %}
+                    {% if let Some(range) = opt.range %}
+                    <input type="range" name="value" class="option-range"
+                           min="{{ range.min }}" max="{{ range.max }}" step="{{ range.step }}"
+                           value="{{ opt.current_value }}">
+                    <span class="range-value">{{ opt.current_value }}</span>
+                    {% endif %}
+                    {% else %}
+                    <select name="value" class="option-select">
+                        {% for choice in opt.choices %}
+                        <option value="{{ choice.value }}" {% if opt.current_value == choice.value %}selected{% endif %}>{{ choice.label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </label>
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+<style>
+.complications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.complication-entry {
+    background: #0f3460;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.complication-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.complication-item:hover {
+    background: #1a508b;
+}
+.complication-item input[type="checkbox"] {
+    margin-top: 0.15rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: #00d4ff;
+}
+.complication-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.complication-name {
+    font-weight: 500;
+    color: #fff;
+}
+.complication-desc {
+    font-size: 0.8rem;
+    color: #888;
+}
+.complication-options {
+    padding: 0.5rem 0.75rem 0.75rem 2.5rem;
+    background: #0a2540;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.option-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+.option-name {
+    color: #aaa;
+    min-width: 80px;
+}
+.option-select {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    background: #1a508b;
+    border: 1px solid #2a609b;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.option-select:hover {
+    background: #2a609b;
+}
+.option-select:focus {
+    outline: none;
+    border-color: #00d4ff;
+}
+.option-range {
+    flex: 1;
+    height: 6px;
+    background: #1a508b;
+    border-radius: 3px;
+    cursor: pointer;
+    accent-color: #00d4ff;
+}
+.option-range::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.option-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+.range-value {
+    min-width: 40px;
+    text-align: right;
+    color: #fff;
+    font-size: 0.85rem;
+}
+</style>

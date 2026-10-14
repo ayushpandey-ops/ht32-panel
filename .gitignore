@@ -1,0 +1,36 @@
+# direnv
+.direnv
+
+# Rust
+/target/
+**/*.rs.bk
+# Note: Cargo.lock is tracked for reproducible builds in flake
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node.js / Web Frontend
+web/node_modules/
+web/dist/
+web/.vite/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.local
+
+# Build artifacts
+*.tar.gz
+dist/
+AceMagic-S1-LED-TFT-Linux/
+result

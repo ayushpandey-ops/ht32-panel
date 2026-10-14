@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          # crates.io now 403s any User-Agent starting with "curl/", and
+          # nixpkgs' fetchurl sends "curl/<ver> Nixpkgs/<ver>". NIX_CURL_FLAGS
+          # is appended after that flag so the later -A wins; the short form
+          # is joined to its value because impure-env splits on spaces.
+          extra-conf: |
+            extra-experimental-features = configurable-impure-env
+            impure-env = NIX_CURL_FLAGS=-ANixpkgs
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: ananthb
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Build release artifacts
+        run: nix build .#release -o result-release
+
+      - name: Build deb and rpm packages
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          dir="pkg-amd64"
+          mkdir -p "$dir"
+
+          # Extract binaries from tarball
+          tar -xzf "$(ls $(readlink result-release)/*.tar.gz)" -C "${dir}"
+
+          # Copy packaging files
+          cp packaging/nfpm.yaml packaging/nfpm-gui.yaml "${dir}/"
+          cp packaging/ht32-panel.gpg packaging/ht32-panel.sources packaging/ht32-panel.repo "${dir}/"
+          cp packaging/ht32-panel.service packaging/99-ht32-panel.rules "${dir}/"
+          cp packaging/org.ht32panel.Daemon.conf packaging/postinstall.sh "${dir}/"
+          cp config/default.toml "${dir}/config.toml"
+          cp packaging/org.ht32panel.Daemon.desktop "${dir}/"
+
+          # Build daemon + CLI package
+          cd "${dir}"
+          ARCH="amd64" VERSION="$VERSION" nix shell nixpkgs#nfpm -c \
+            nfpm package -p deb -f nfpm.yaml
+          ARCH="x86_64" VERSION="$VERSION" nix shell nixpkgs#nfpm -c \
+            nfpm package -p rpm -f nfpm.yaml
+
+          # Build applet package
+          ARCH="amd64" VERSION="$VERSION" nix shell nixpkgs#nfpm -c \
+            nfpm package -p deb -f nfpm-gui.yaml
+          ARCH="x86_64" VERSION="$VERSION" nix shell nixpkgs#nfpm -c \
+            nfpm package -p rpm -f nfpm-gui.yaml
+          cd ..
+
+          # Collect all artifacts
+          mkdir -p dist
+          cp result-release/* dist/
+          mv pkg-amd64/*.deb pkg-amd64/*.rpm dist/
+
+      - name: Generate checksums and sign
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          for f in *; do
+            cosign sign-blob --yes \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.pem" \
+              "$f"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: release
+    permissions:
+      # Lets crates-io-auth-action mint a short-lived OIDC token at
+      # publish time, scoped to this repo + workflow. No long-lived
+      # secret to rotate, and nothing to expire.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          # crates.io now 403s any User-Agent starting with "curl/", and
+          # nixpkgs' fetchurl sends "curl/<ver> Nixpkgs/<ver>". NIX_CURL_FLAGS
+          # is appended after that flag so the later -A wins; the short form
+          # is joined to its value because impure-env splits on spaces.
+          extra-conf: |
+            extra-experimental-features = configurable-impure-env
+            impure-env = NIX_CURL_FLAGS=-ANixpkgs
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: ananthb
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      - name: Publish ht32-panel-hw
+        run: nix develop -c cargo publish -p ht32-panel-hw
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish ht32-panel-client
+        run: nix develop -c cargo publish -p ht32-panel-client
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Wait for crates.io indexing
+        run: sleep 30
+
+      - name: Publish ht32-panel-daemon
+        run: nix develop -c cargo publish -p ht32-panel-daemon
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ht32-panel-cli
+        run: nix develop -c cargo publish -p ht32-panel-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish ht32-panel-applet
+        run: nix develop -c cargo publish -p ht32-panel-applet
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
