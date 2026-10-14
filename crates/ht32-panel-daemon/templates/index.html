@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div id="terminal-roast" class="roast-toast" role="alert" aria-live="assertive" hidden>
+    <strong>💀 Terminal roast</strong>
+    <p id="terminal-roast-message"></p>
+</div>
+
 <div class="card">
     <div id="status" hx-get="/status" hx-trigger="load, every 5s" hx-swap="innerHTML">
         Loading...
@@ -90,6 +95,16 @@
 
     evtSource.addEventListener('led', function(e) {
         htmx.trigger('#led-controls', 'load');
+    });
+
+    let roastTimeout = null;
+    evtSource.addEventListener('roast', function(e) {
+        const toast = document.getElementById('terminal-roast');
+        document.getElementById('terminal-roast-message').textContent = e.data;
+        toast.hidden = false;
+        clearTimeout(roastTimeout);
+        roastTimeout = setTimeout(function() { toast.hidden = true; }, 8000);
+        refreshAfterChange();
     });
 
     evtSource.onerror = function() {

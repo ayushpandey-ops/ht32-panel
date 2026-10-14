@@ -198,17 +198,12 @@ impl LcdDevice {
 
     /// Sends a heartbeat to keep the device alive using system time.
     pub fn heartbeat(&self) -> Result<()> {
-        use std::time::{SystemTime, UNIX_EPOCH};
+        use chrono::{Local, Timelike};
 
-        let duration = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
-        let secs = duration.as_secs();
-
-        // Simple time extraction (UTC)
-        let hours = ((secs / 3600) % 24) as u8;
-        let minutes = ((secs / 60) % 60) as u8;
-        let seconds = (secs % 60) as u8;
+        let now = Local::now();
+        let hours = now.hour() as u8;
+        let minutes = now.minute() as u8;
+        let seconds = now.second() as u8;
 
         self.heartbeat_with_time(hours, minutes, seconds)
     }

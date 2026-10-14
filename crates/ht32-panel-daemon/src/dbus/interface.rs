@@ -24,6 +24,8 @@ pub enum DaemonSignals {
     DisplaySettingsChanged,
     /// Complication option changed.
     ComplicationOptionChanged,
+    /// A terminal failure roast should be shown in the web UI.
+    TerminalRoastShown(String),
 }
 
 /// D-Bus interface implementation for the HT32 Panel Daemon.
@@ -116,7 +118,9 @@ impl Daemon1Interface {
         self.state
             .show_terminal_roast(message, duration_secs)
             .map_err(|error| zbus::fdo::Error::InvalidArgs(error.to_string()))?;
-        let _ = self.signal_tx.send(DaemonSignals::DisplaySettingsChanged);
+        let _ = self
+            .signal_tx
+            .send(DaemonSignals::TerminalRoastShown(message.to_string()));
         debug!("D-Bus: ShowTerminalRoast(duration={}s)", duration_secs);
         Ok(())
     }

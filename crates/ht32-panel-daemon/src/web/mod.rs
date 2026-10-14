@@ -182,13 +182,16 @@ async fn events_stream(
     let stream = BroadcastStream::new(rx).filter_map(|result| {
         match result {
             Ok(signal) => {
-                let event_type = match signal {
-                    DaemonSignals::OrientationChanged => "orientation",
-                    DaemonSignals::LedChanged => "led",
-                    DaemonSignals::DisplaySettingsChanged => "display",
-                    DaemonSignals::ComplicationOptionChanged => "complication",
+                let (event_type, data) = match signal {
+                    DaemonSignals::OrientationChanged => ("orientation", "reload".to_string()),
+                    DaemonSignals::LedChanged => ("led", "reload".to_string()),
+                    DaemonSignals::DisplaySettingsChanged => ("display", "reload".to_string()),
+                    DaemonSignals::ComplicationOptionChanged => {
+                        ("complication", "reload".to_string())
+                    }
+                    DaemonSignals::TerminalRoastShown(message) => ("roast", message),
                 };
-                Some(Ok(Event::default().event(event_type).data("reload")))
+                Some(Ok(Event::default().event(event_type).data(data)))
             }
             Err(_) => None, // Skip lagged messages
         }
