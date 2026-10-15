@@ -153,7 +153,10 @@ async fn render_loop(state: Arc<AppState>) {
             consecutive_errors = 0;
         }
         let ms = state.refresh_interval_ms();
-        tokio::time::sleep(std::time::Duration::from_millis(ms as u64)).await;
+        tokio::select! {
+            _ = state.wait_for_redraw() => {},
+            _ = tokio::time::sleep(std::time::Duration::from_millis(ms as u64)) => {},
+        }
     }
 }
 

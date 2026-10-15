@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, RwLock};
+use tokio::sync::Notify;
 use tracing::{debug, error, info, warn};
 
 use crate::config::Config;
@@ -250,6 +251,9 @@ pub struct AppState {
     /// System sensors
     sensors: Mutex<Sensors>,
 
+    /// Wakes the render loop immediately after a state change.
+    render_notify: Notify,
+
     /// Short-lived terminal failure message rendered over the active face.
     terminal_roast: Mutex<Option<(String, std::time::Instant)>>,
 
@@ -394,6 +398,7 @@ impl AppState {
                 cached_png: None,
             }),
             sensors: Mutex::new(sensors),
+            render_notify: Notify::new(),
             terminal_roast: Mutex::new(None),
             save_pending: AtomicBool::new(false),
             last_save: Mutex::new(now),
@@ -548,6 +553,7 @@ impl AppState {
             render.framebuffer.clear(0);
             render.cached_png = None;
         }
+        self.render_notify.notify_one();
 
         self.save_display_settings();
         info!("Orientation set to: {}", orientation);
@@ -836,6 +842,12 @@ impl AppState {
     /// Triggers a full redraw on the next frame.
     pub fn force_redraw(&self) {
         self.display.write().unwrap().needs_redraw = true;
+        self.render_notify.notify_one();
+    }
+
+    /// Waits for an explicit state change that should be rendered immediately.
+    pub async fn wait_for_redraw(&self) {
+        self.render_notify.notified().await;
     }
 
     /// Returns the current canvas as PNG bytes (cached).
@@ -890,6 +902,7 @@ impl AppState {
             display.face = new_face;
             display.needs_redraw = true;
             drop(display);
+            self.render_notify.notify_one();
             self.save_display_settings();
             info!("Display face changed to: {}", name);
             Ok(())
@@ -1053,6 +1066,7 @@ impl AppState {
             .set_enabled(&face_name, complication_id, enabled);
         display.needs_redraw = true;
         drop(display);
+        self.render_notify.notify_one();
 
         self.save_display_settings();
         info!(
@@ -1087,6 +1101,7 @@ impl AppState {
             render.canvas.set_background(theme.background);
             render.cached_png = None;
         }
+        self.render_notify.notify_one();
 
         self.save_display_settings();
         info!("Theme set to: {}", name);
@@ -1181,6 +1196,7 @@ impl AppState {
             .set_option(&face_name, complication_id, option_id, value.to_string());
         display.needs_redraw = true;
         drop(display);
+        self.render_notify.notify_one();
 
         // Special handling for network interface changes
         if complication_id == faces::complication_names::NETWORK

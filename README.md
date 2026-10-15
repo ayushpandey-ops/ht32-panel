@@ -47,3 +47,4 @@ My thanks for the ideas and source code from [github.com/tjaworski/AceMagic-S1-L
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
 
 Copyright &#169; Ananth Bhaskararaman 2026
+# ht32-panel
