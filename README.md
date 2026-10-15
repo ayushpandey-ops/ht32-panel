@@ -15,6 +15,21 @@ Front-panel display and LED control for mini PCs with HT32-based LCD and RGB LED
 
 See the [installation guide](https://ananthb.github.io/ht32-panel/install.html) for all options (deb, rpm, AppImage, NixOS, from source).
 
+### One-command installer
+
+On x86-64 Debian/Ubuntu, Fedora, or Arch Linux, the installer installs build
+dependencies, builds the daemon and CLI, configures USB access and the system
+service, and starts it. It uses `sudo` for system changes and keeps any existing
+`/etc/ht32-panel/config.toml`:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/ayushpandey-ops/ht32-panel/main/install.sh
+less install.sh  # review the installer before running it
+bash install.sh
+```
+
+The script is available for review at [`install.sh`](install.sh).
+
 ### Quick start
 
 ```bash
