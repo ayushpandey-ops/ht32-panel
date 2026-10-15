@@ -189,7 +189,7 @@ fn default_state_dir() -> String {
 }
 
 fn default_refresh_interval() -> u64 {
-    2500
+    1000
 }
 
 fn default_heartbeat() -> u64 {

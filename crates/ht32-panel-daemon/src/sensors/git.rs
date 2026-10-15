@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-const REFRESH_INTERVAL: Duration = Duration::from_secs(15);
+// Refresh on the daemon's one-second render cadence so branch checkouts and
+// new commits appear promptly even when they happen outside the editor.
+const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 const COMMIT_COUNT: usize = 5;
 
 #[derive(Debug, Clone, Default)]

@@ -4,7 +4,7 @@
 # [section] header, so top-level settings must stay ABOVE the first one.
 
 # Display refresh interval (milliseconds, 500-10000)
-refresh_interval = 2500
+refresh_interval = 1000
 
 # Heartbeat interval (milliseconds)
 heartbeat = 1000

@@ -84,7 +84,7 @@ fn default_led_value() -> u8 {
 }
 
 fn default_refresh_interval() -> u32 {
-    2500 // 2.5s default
+    1000 // 1s default
 }
 
 impl Default for DisplaySettings {
@@ -213,6 +213,7 @@ struct LedState {
 struct RenderState {
     canvas: Canvas,
     framebuffer: Framebuffer,
+    last_lcd_framebuffer: Option<Framebuffer>,
     cached_png: Option<Vec<u8>>,
 }
 
@@ -395,6 +396,7 @@ impl AppState {
             render: RwLock::new(RenderState {
                 canvas,
                 framebuffer,
+                last_lcd_framebuffer: None,
                 cached_png: None,
             }),
             sensors: Mutex::new(sensors),
@@ -691,7 +693,10 @@ impl AppState {
 
     /// Renders a frame and updates the display.
     pub async fn render_frame(&self) -> Result<()> {
+        let sensor_started = std::time::Instant::now();
         let system_data = self.sample_sensors();
+        let sensor_sample_ms = sensor_started.elapsed().as_millis();
+        let render_started = std::time::Instant::now();
 
         // Render face to canvas
         {
@@ -727,20 +732,33 @@ impl AppState {
             render.cached_png = None;
         }
 
-        // Transform canvas to framebuffer and send to LCD
+        // Transform canvas to framebuffer and send only changed regions to LCD.
         {
             let orientation = self.display.read().unwrap().orientation;
             let mut render = self.render.write().unwrap();
             Self::render_to_framebuffer(&mut render, orientation)?;
+            let render_ms = render_started.elapsed().as_millis();
 
-            // Send to LCD; record the outcome for health tracking.
+            let usb_started = std::time::Instant::now();
+            let mut update_stats = (0usize, 0usize); // packets, changed pixels
             let send_result = {
                 let lcd = self.lcd.lock().unwrap();
-                lcd.as_ref()
-                    .map(|device| device.redraw(&render.framebuffer))
+                lcd.as_ref().map(|device| {
+                    let result = if let Some(previous) = render.last_lcd_framebuffer.as_ref() {
+                        Self::update_lcd(device, previous, &render.framebuffer, &mut update_stats)
+                    } else {
+                        update_stats = (27, render.framebuffer.data().len());
+                        Ok(device.redraw(&render.framebuffer)?)
+                    };
+                    if result.is_ok() {
+                        render.last_lcd_framebuffer = Some(render.framebuffer.clone());
+                    }
+                    result
+                })
             };
             match send_result {
-                Some(Ok(())) => self.on_write_success(),
+                Some(Ok(())) if update_stats.0 > 0 => self.on_write_success(),
+                Some(Ok(())) => {},
                 Some(Err(e)) => self.on_write_failure("Render", &e),
                 None => {
                     // Disconnected: attempt a (rate-limited) reopen, then redraw.
@@ -749,6 +767,7 @@ impl AppState {
                         if let Some(ref device) = *lcd {
                             match device.redraw(&render.framebuffer) {
                                 Ok(()) => {
+                                    render.last_lcd_framebuffer = Some(render.framebuffer.clone());
                                     drop(lcd);
                                     self.on_write_success();
                                 }
@@ -761,6 +780,9 @@ impl AppState {
                     }
                 }
             }
+            let usb_ms = usb_started.elapsed().as_millis();
+            debug!(target: "ht32paneld::perf", sensor_sample_ms, render_ms, usb_update_ms = usb_ms,
+                lcd_packets = update_stats.0, changed_pixels = update_stats.1, "Frame timing");
         }
 
         // Handle LED updates
@@ -776,6 +798,71 @@ impl AppState {
         // Flush settings if debounce timer has elapsed
         self.maybe_flush_settings();
 
+        Ok(())
+    }
+
+    /// Uses small partial refreshes for sparse changes and a full redraw for
+    /// broad changes. Each refresh packet can carry at most 2048 RGB565 pixels.
+    fn update_lcd(
+        device: &LcdDevice,
+        previous: &Framebuffer,
+        current: &Framebuffer,
+        stats: &mut (usize, usize),
+    ) -> Result<()> {
+        const TILE: usize = 16;
+        const MAX_REGIONS: usize = 20;
+        let width = current.width() as usize;
+        let height = current.height() as usize;
+        if previous.width() != current.width() || previous.height() != current.height() {
+            stats.0 = 27;
+            stats.1 = current.data().len();
+            return Ok(device.redraw(current)?);
+        }
+        let old = previous.data();
+        let new = current.data();
+        let mut dirty_pixels = 0usize;
+        let mut dirty_tiles = vec![false; width.div_ceil(TILE) * height.div_ceil(TILE)];
+        let tiles_x = width.div_ceil(TILE);
+        for y in 0..height {
+            for x in 0..width {
+                let idx = y * width + x;
+                if old[idx] != new[idx] {
+                    dirty_pixels += 1;
+                    dirty_tiles[(y / TILE) * tiles_x + x / TILE] = true;
+                }
+            }
+        }
+        stats.1 = dirty_pixels;
+        if dirty_pixels == 0 { return Ok(()); }
+        let mut regions = Vec::new();
+        for ty in 0..height.div_ceil(TILE) {
+            let mut tx = 0;
+            while tx < tiles_x {
+                if !dirty_tiles[ty * tiles_x + tx] { tx += 1; continue; }
+                let start = tx;
+                while tx < tiles_x && dirty_tiles[ty * tiles_x + tx] { tx += 1; }
+                let mut x = start;
+                while x < tx {
+                    let end = (x + 8).min(tx); // 8 * 16 * 16 = 2048 pixels
+                    let px = x * TILE;
+                    let py = ty * TILE;
+                    let rw = (end * TILE).min(width) - px;
+                    let rh = (py + TILE).min(height) - py;
+                    regions.push((px, py, rw, rh));
+                    x = end;
+                }
+            }
+        }
+        if regions.len() >= MAX_REGIONS || dirty_pixels * 3 > new.len() {
+            stats.0 = 27;
+            stats.1 = dirty_pixels;
+            return Ok(device.redraw(current)?);
+        }
+        for (x, y, rw, rh) in regions {
+            let pixels = current.extract_region(x as u16, y as u16, rw as u16, rh as u16);
+            device.refresh(x as u16, y as u16, rw as u8, rh as u8, &pixels)?;
+            stats.0 += 1;
+        }
         Ok(())
     }
 
