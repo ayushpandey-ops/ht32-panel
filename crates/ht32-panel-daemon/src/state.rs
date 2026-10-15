@@ -758,7 +758,7 @@ impl AppState {
             };
             match send_result {
                 Some(Ok(())) if update_stats.0 > 0 => self.on_write_success(),
-                Some(Ok(())) => {},
+                Some(Ok(())) => {}
                 Some(Err(e)) => self.on_write_failure("Render", &e),
                 None => {
                     // Disconnected: attempt a (rate-limited) reopen, then redraw.
@@ -833,14 +833,21 @@ impl AppState {
             }
         }
         stats.1 = dirty_pixels;
-        if dirty_pixels == 0 { return Ok(()); }
+        if dirty_pixels == 0 {
+            return Ok(());
+        }
         let mut regions = Vec::new();
         for ty in 0..height.div_ceil(TILE) {
             let mut tx = 0;
             while tx < tiles_x {
-                if !dirty_tiles[ty * tiles_x + tx] { tx += 1; continue; }
+                if !dirty_tiles[ty * tiles_x + tx] {
+                    tx += 1;
+                    continue;
+                }
                 let start = tx;
-                while tx < tiles_x && dirty_tiles[ty * tiles_x + tx] { tx += 1; }
+                while tx < tiles_x && dirty_tiles[ty * tiles_x + tx] {
+                    tx += 1;
+                }
                 let mut x = start;
                 while x < tx {
                     let end = (x + 8).min(tx); // 8 * 16 * 16 = 2048 pixels
